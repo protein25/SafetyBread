@@ -1,0 +1,16 @@
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <android.support.constraint.ConstraintLayout
+        android:layout_height="?attr/actionBarSize"
+        android:layout_width="match_parent">
+
+        <android.support.design.widget.BottomNavigationView
+            android:id="@+id/navigator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/white_gray_border_bottom"
+            app:menu="@menu/navigator_menu" />
+    </android.support.constraint.ConstraintLayout>
+
+
+</merge>
