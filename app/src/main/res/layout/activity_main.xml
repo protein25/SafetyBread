@@ -6,46 +6,23 @@
     android:layout_height="match_parent"
     tools:context="safetybread.hanium.sangeun.safetybread.MainActivity">
 
-
-    <TextView
-        android:id="@+id/carbon_tag"
-        android:layout_width="215dp"
-        android:layout_height="67dp"
-        android:layout_marginBottom="63dp"
-        android:layout_marginEnd="84dp"
-        android:layout_marginLeft="85dp"
-        android:layout_marginRight="84dp"
-        android:layout_marginStart="85dp"
-        android:layout_marginTop="138dp"
-        android:gravity="center_vertical|center_horizontal"
-        android:text="이산화탄소 농도"
-        android:textSize="30sp"
-        app:layout_constraintBottom_toTopOf="@+id/carbon_concentrate"
+    <android.support.design.widget.BottomNavigationView
+        android:id="@+id/design_navigation_view"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@drawable/white_gray_border"
+        app:layout_constraintBottom_toTopOf="@+id/pager"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:menu="@menu/navigator" />
 
-    <TextView
-        android:id="@+id/carbon_textview"
-        android:layout_width="173dp"
-        android:layout_height="153dp"
-        android:layout_marginBottom="148dp"
-        android:layout_marginEnd="105dp"
-        android:layout_marginLeft="106dp"
-        android:layout_marginRight="105dp"
-        android:layout_marginStart="106dp"
-        android:layout_marginTop="24dp"
-        android:background="@drawable/carbon_shape"
-        android:gravity="center_vertical|center_horizontal"
-        android:text="00"
-        android:textSize="60sp"
-        app:layout_constraintBottom_toBottomOf="parent"
+    <android.support.v4.view.ViewPager
+        android:id="@+id/pager"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/carbon_tag" />
+        app:layout_constraintTop_toBottomOf="@id/design_navigation_view" />
 
-    <include
-        android:id="@+id/navigator"
-        layout="@layout/bottom_navigation_view"
-        app:layout_constraintTop_toTopOf="parent" />
 </android.support.constraint.ConstraintLayout>

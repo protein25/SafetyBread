@@ -11,8 +11,8 @@
     <TextView
         android:id="@+id/serviceArea"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="15dp"
         android:layout_marginTop="10dp"
         android:hint="serviceArea"
         android:textSize="25dp"
@@ -28,26 +28,75 @@
         android:layout_width="wrap_content"
         android:layout_height="0dp"
         android:layout_marginEnd="8dp"
-        android:hint="distance"
         android:gravity="center_vertical"
+        android:hint="distance"
         android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="@id/serviceArea"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.9"
         app:layout_constraintLeft_toRightOf="@+id/serviceArea"
         app:layout_constraintTop_toTopOf="@id/serviceArea"
-        app:layout_constraintBottom_toBottomOf="@id/serviceArea"
         app:layout_constraintVertical_bias="0.1" />
+
+    <TextView
+        android:id="@+id/tv_routeName"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_margin="8dp"
+        android:hint="routeName"
+        android:paddingTop="10dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.05"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/serviceArea" />
+
+    <TextView
+        android:id="@+id/tv_time"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="5dp"
+        android:hint="serviceTime"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.05"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_routeName" />
+
+    <TextView
+        android:id="@+id/tv_tel"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="5dp"
+        android:hint="areaTel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.05"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_time" />
+
+    <TextView
+        android:id="@+id/tv_food"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="5dp"
+        android:hint="signatureFood"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.05"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_tel" />
+
 
     <TextView
         android:id="@+id/restInfo"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="8dp"
-        app:layout_constraintHorizontal_bias="0.05"
+        android:layout_height="0dp"
         android:layout_marginStart="8dp"
+        android:layout_marginTop="5dp"
         android:hint="info"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.05"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/serviceArea" />
+        app:layout_constraintTop_toBottomOf="@id/tv_food" />
+
 </android.support.constraint.ConstraintLayout>

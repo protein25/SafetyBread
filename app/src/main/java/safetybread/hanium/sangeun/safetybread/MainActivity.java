@@ -1,30 +1,35 @@
 package safetybread.hanium.sangeun.safetybread;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.Handler;
-import android.support.design.widget.BottomNavigationView;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.view.ViewPager;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
-
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -33,70 +38,68 @@ import java.util.UUID;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
 import io.realm.RealmResults;
-import safetybread.hanium.sangeun.safetybread.Models.ServiceArea;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends PermissionActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
-    private static final int ACTIVITY_NUM = 0;
-
-    private TextView carbon_concentration;
+    private static final int REQUEST_ENABLE_BT = 10;
 
     public static Realm realm;
-    public static RealmResults<ServiceArea> savedAreas;
+    public static RealmResults<ServiceArea> results;
 
-    static final int REQUEST_ENABLE_BT = 10;
-    int mPariedDeviceCount = 0;
-    Set<BluetoothDevice> mDevices;
+    private BottomNavigationView navigationView;
+    private ViewPager pager;
+    private PagerAdapter pagerAdapter;
 
-    BluetoothAdapter mBluetoothAdapter;
-    BluetoothDevice mRemoteDevie;
+    private int mPariedDeviceCount = 0;
+    private Set<BluetoothDevice> mDevices;
 
-    BluetoothSocket mSocket = null;
-    OutputStream mOutputStream = null;
-    InputStream mInputStream = null;
-    String mStrDelimiter = "\n";
-    char mCharDelimiter = '\n';
+    private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothDevice mRemoteDevie;
 
-    Thread mWorkerThread = null;
-    byte[] readBuffer;
-    int readBufferPosition;
+    private BluetoothSocket mSocket = null;
+    private OutputStream mOutputStream = null;
+    private InputStream mInputStream = null;
+    private String mStrDelimiter = "\n";
+    private char mCharDelimiter = '\n';
+
+    private Thread mWorkerThread = null;
+    private byte[] readBuffer;
+    private int readBufferPosition;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate() : starting");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Log.d(TAG, "onCreate : starting");
 
-        carbon_concentration = findViewById(R.id.carbon_textview);
+        settingPermissions();
 
-        setUpBottomNavigationView();
+        Realm.init(getApplicationContext());
+        RealmConfiguration configuration = new RealmConfiguration.Builder().deleteRealmIfMigrationNeeded().build();
+        realm = Realm.getInstance(configuration);
+        results = realm.where(ServiceArea.class).findAll();
 
-        Realm.init(this);
-        RealmConfiguration config = new RealmConfiguration.Builder()
-                .deleteRealmIfMigrationNeeded()
-                .build();
-        realm = Realm.getInstance(config);
+        initData();
 
-        savedAreas = realm.where(ServiceArea.class).findAll();
-        if (savedAreas.size() == 0) {
-            initData();
-        } else {
-            Log.i("DATA EXIST!", "YAY! - " + savedAreas.size());
-        }
+//        if (results == null) {
+//            initData();
+//        } else {
+//            Log.d("getData", "Realm already have ServiceArea data.");
+//        }
 
+        navigationView = findViewById(R.id.design_navigation_view);
+        navigationView.setOnNavigationItemSelectedListener(navigationListener);
+
+        pager = findViewById(R.id.pager);
+        pagerAdapter = new PagerAdapter(getSupportFragmentManager());
+        pagerAdapter.addFragment(new CarbonFragment());
+        pagerAdapter.addFragment(new ServiceAreaFragment());
+        pager.setAdapter(pagerAdapter);
+        pager.addOnPageChangeListener(pageListener);
     }
 
-    private void setUpBottomNavigationView() {
-        BottomNavigationView navigationView = findViewById(R.id.navigator);
-        BottomNavigationViewHelper.disableShiftMode(navigationView);
-        BottomNavigationViewHelper.selectMenu(getApplicationContext(), navigationView);
-        Menu menu = navigationView.getMenu();
-        MenuItem menuItem = menu.getItem(ACTIVITY_NUM);
-        menuItem.setChecked(true);
-    }
-
-    public void initData() {
-        JSONArray array = ParsingData.getJson(getResources().openRawResource(R.raw.rest));
+    public void initData(){
+        JSONArray array = getJson(getResources().openRawResource(R.raw.service_area_api));
         try {
             if (array.length() == 0) {
                 return;
@@ -154,7 +157,83 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+    //파일 데이터 파싱 메서드
+    static public JSONArray getJson(InputStream is) {
+        Writer writer = new StringWriter();
+        char[] buffer = new char[1024];
+        try {
+            Reader reader = new BufferedReader(new InputStreamReader(is, "EUC-KR"));
+            int n;
+            while ((n = reader.read(buffer)) != -1) {
+                writer.write(buffer, 0, n);
+            }
+            is.close();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String jsonString = writer.toString();
+        JSONArray jsonArray = null;
+        try {
+            jsonArray = new JSONArray(jsonString);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return jsonArray;
+    }
 
+    public void settingPermissions() {
+        addPermissions(Manifest.permission.ACCESS_FINE_LOCATION);
+        addPermissions(Manifest.permission.ACCESS_COARSE_LOCATION);
+        checkAndRequestPermission();
+    }
+
+    private BottomNavigationView.OnNavigationItemSelectedListener navigationListener = new BottomNavigationView.OnNavigationItemSelectedListener() {
+        @Override
+        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            int id = item.getItemId();
+            switch (id) {
+                case R.id.carbon_concentrate:
+                    pager.setCurrentItem(0);
+                    return true;
+                case R.id.serviceArea:
+                    pager.setCurrentItem(1);
+                    return true;
+            }
+            return false;
+        }
+    };
+
+    private ViewPager.OnPageChangeListener pageListener = new ViewPager.OnPageChangeListener() {
+        @Override
+        public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+        }
+
+        @Override
+        public void onPageSelected(int position) {
+            for (int i = 0; i < pagerAdapter.getCount(); i++) {
+                pagerAdapter.getItem(i).setHasOptionsMenu(false);
+                if (i == position) {
+                }
+                invalidateOptionsMenu();
+            }
+            switch (position) {
+                case 0:
+                    navigationView.setSelectedItemId(R.id.carbon_concentrate);
+                    break;
+                case 1:
+                    navigationView.setSelectedItemId(R.id.serviceArea);
+                    break;
+            }
+        }
+
+        @Override
+        public void onPageScrollStateChanged(int state) {
+
+        }
+    };
 
     void checkBluetooth() {
         /**
@@ -325,14 +404,11 @@ public class MainActivity extends AppCompatActivity {
                                         public void run() {
                                             // mStrDelimiter = '\n';
 
-//                                            LeftFragment leftFragment = new LeftFragment();
-//                                            Bundle bundle = new Bundle();
-//                                            bundle.putString("data",data);
-//                                            Log.e("Test", data);
-//                                            leftFragment.setArguments(bundle);
-//                                            leftFragment.setText();
+                                            Bundle bundle = new Bundle();
+                                            bundle.putString("data",data);
+                                            Log.e("Test", data);
+                                            pagerAdapter.getItem(0).setArguments(bundle);
 
-                                            carbon_concentration.setText(data);
                                         }
 
                                     });
@@ -375,7 +451,7 @@ public class MainActivity extends AppCompatActivity {
                 if (resultCode == RESULT_OK) { // 블루투스 활성화 상태
                     selectDevice();
                 } else if (resultCode == RESULT_CANCELED) { // 블루투스 비활성화 상태 (종료)
-                    Toast.makeText(getApplicationContext(), "블루투수를 사용할 수 없어 프로그램을 종료합니다",
+                    Toast.makeText(getApplicationContext(), "블루투스를 사용할 수 없어 프로그램을 종료합니다",
                             Toast.LENGTH_LONG).show();
                     finish();
                 }
@@ -385,4 +461,3 @@ public class MainActivity extends AppCompatActivity {
     }
 
 }
-

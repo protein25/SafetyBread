@@ -1,95 +1,90 @@
 package safetybread.hanium.sangeun.safetybread;
 
-import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by sangeun on 2018-08-12.
+ * Created by sangeun on 2018-08-18.
  */
 
 public class PermissionActivity extends AppCompatActivity {
-    private final static int ALL_PERMISSIONS_RESULT = 101;
+    private static final int PERMISSION_REQUEST_RESULT = 100;
 
-    private boolean mustGrantAllPermission = true;
+    private List<String> permissions = new ArrayList<>();
+    private List<String> permissionNotGranted = new ArrayList<>();
 
-    private List<String> permissions = new ArrayList();
-    private List<String> permissionsNotGranted = new ArrayList<>();
+    private boolean mustGrantedPermission = true;
 
-    protected void addPermission(String permission) {
+    //필수 권한 메서드
+    public void setMustGrantedPermission(boolean mustGrantedPermission) {
+        this.mustGrantedPermission = mustGrantedPermission;
+    }
+
+    //필요한 권한 추가 메서드
+    public void addPermissions(String permission) {
         permissions.add(permission);
     }
 
-    protected void setMustGrant(boolean mustGrantAllPermission) {
-        this.mustGrantAllPermission = mustGrantAllPermission;
-    }
-
-    protected void checkAndRequestPermissions() {
-        permissionsNotGranted.clear();
-
-        for (String permission : permissions) {
-            if (!checkPermission(permission)) {
-                permissionsNotGranted.add(permission);
-            }
-        }
-        requestAllPermissions();
-    }
-
-    protected boolean checkPermission(String permission) {
+    //권한 검사 메서드
+    private boolean checkPermisson(String permission) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             return checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
         }
         return false;
     }
 
-    private void requestAllPermissions() {
-        if (permissionsNotGranted.size() == 0) {
+    //권한 요청 메서드
+    private void requestAllPermission() {
+        if (permissionNotGranted.size() == 0) {
             return;
         }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(permissionsNotGranted.toArray(new String[permissionsNotGranted.size()]), ALL_PERMISSIONS_RESULT);
+            requestPermissions(permissionNotGranted.toArray(new String[permissionNotGranted.size()]), PERMISSION_REQUEST_RESULT);
         }
     }
 
-    private void showMessageOKCancel(String message, DialogInterface.OnClickListener okListener) {
-        new AlertDialog.Builder(this)
-                .setMessage(message)
-                .setPositiveButton("OK", okListener)
-                .create()
-                .show();
+    //권한 검사 및 요청하는 메서드
+    public void checkAndRequestPermission() {
+        permissionNotGranted.clear();
+        for (String permission : permissions) {
+            if (!checkPermisson(permission)) {
+                permissionNotGranted.add(permission);
+            }
+        }
+        requestAllPermission();
     }
 
+    //권한 승인 요청 메서드
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
-            case ALL_PERMISSIONS_RESULT:
+            case PERMISSION_REQUEST_RESULT:
                 boolean allGranted = true;
                 for (String permission : permissions) {
-                    if (!checkPermission(permission)) {
+                    if (!checkPermisson(permission)) {
                         allGranted = false;
                         break;
                     }
                 }
-                if (mustGrantAllPermission && !allGranted) {
-                    showMessageOKCancel("This permissions are mandatory for the application. Please allow access.", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            checkAndRequestPermissions();
-                        }
-                    });
+                if (mustGrantedPermission && !allGranted) {
+                    new AlertDialog.Builder(getApplicationContext())
+                            .setMessage("This permissions are mandatory for the application. Please allow access.")
+                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    checkAndRequestPermission();
+                                }
+                            })
+                            .create()
+                            .show();
                 }
-                break;
         }
     }
 }
