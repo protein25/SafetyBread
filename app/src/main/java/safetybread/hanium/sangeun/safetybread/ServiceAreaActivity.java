@@ -1,7 +1,11 @@
 package safetybread.hanium.sangeun.safetybread;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
+import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.BottomNavigationView;
@@ -26,9 +30,11 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.maps.android.SphericalUtil;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Locale;
+import static android.speech.tts.TextToSpeech.ERROR;
 import io.realm.Realm;
 import io.realm.RealmResults;
 import safetybread.hanium.sangeun.safetybread.Models.ServiceArea;
@@ -49,7 +55,7 @@ public class ServiceAreaActivity extends PermissionActivity implements GoogleMap
     private TextView unitName;
     private TextView distanceText;
     private TextView restInfo;
-
+    TextToSpeech tts;
     private RealmResults<ServiceArea> savedArea = MainActivity.savedAreas;
 
     @Override
@@ -64,6 +70,16 @@ public class ServiceAreaActivity extends PermissionActivity implements GoogleMap
         unitName = bottomSheet.findViewById(R.id.serviceArea);
         distanceText = bottomSheet.findViewById(R.id.distance);
         restInfo = bottomSheet.findViewById(R.id.restInfo);
+
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status != ERROR) {
+                    // 언어를 선택한다.
+                    tts.setLanguage(Locale.KOREAN);
+                }
+            }
+        });
 
         mLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         settingPermissions();
@@ -93,6 +109,8 @@ public class ServiceAreaActivity extends PermissionActivity implements GoogleMap
                                 nearestMarker = marker;
                             }
                         }
+
+
                         final Marker finalNearestMarker = nearestMarker;
                         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(nearestMarker.getPosition(), 16), new GoogleMap.CancelableCallback() {
                             @Override
@@ -112,6 +130,12 @@ public class ServiceAreaActivity extends PermissionActivity implements GoogleMap
             }
         });
 
+        Intent intent = getIntent();
+        int flag = intent.getIntExtra("flag",0);
+
+        if(flag == 100)
+            Log.e("TTS","start");
+            speakText();
     }
 
     private void settingPermissions() {
@@ -134,6 +158,7 @@ public class ServiceAreaActivity extends PermissionActivity implements GoogleMap
         mLocationProviderClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
             @Override
             public void onSuccess(Location location) {
+                Log.e("Location", location.getLatitude()+".");
                 onUserLocationSuccess.onSuccess(new LatLng(location.getLatitude(), location.getLongitude()));
             }
         });
@@ -176,6 +201,11 @@ public class ServiceAreaActivity extends PermissionActivity implements GoogleMap
             }
         };
         getUserLocation(onUserLocationSuccess);
+    }
+
+    public void speakText(){
+        tts.speak("졸음이 감지되었습니다. 근처의 "+restInfo.getText().toString()+"에서 휴식을 취하세요.",TextToSpeech.QUEUE_FLUSH, null);
+
     }
 
 

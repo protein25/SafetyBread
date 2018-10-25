@@ -1,11 +1,26 @@
 package safetybread.hanium.sangeun.safetybread;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Resources;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.SoundPool;
+import android.os.Build;
 import android.os.Handler;
+import android.provider.MediaStore;
+import android.support.annotation.RequiresApi;
+import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -28,6 +43,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.StringTokenizer;
+import java.util.TimerTask;
 import java.util.UUID;
 
 import io.realm.Realm;
@@ -41,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView carbon_concentration;
 
+    NotificationManager nm;
+    MediaPlayer mediaPlayer;
     public static Realm realm;
     public static RealmResults<ServiceArea> savedAreas;
 
@@ -57,17 +76,22 @@ public class MainActivity extends AppCompatActivity {
     String mStrDelimiter = "\n";
     char mCharDelimiter = '\n';
 
+    NotificationChannel notificationChannel;
     Thread mWorkerThread = null;
     byte[] readBuffer;
     int readBufferPosition;
 
+    ConstraintLayout layout;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Log.d(TAG, "onCreate : starting");
 
+        layout =(ConstraintLayout)findViewById(R.id.mainlayout);
         carbon_concentration = findViewById(R.id.carbon_textview);
+        mediaPlayer = MediaPlayer.create(MainActivity.this, R.raw.wake);
+
 
         setUpBottomNavigationView();
 
@@ -83,6 +107,21 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.i("DATA EXIST!", "YAY! - " + savedAreas.size());
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationChannel = new NotificationChannel("1234", "channel_name", NotificationManager.IMPORTANCE_DEFAULT);
+            notificationChannel.setDescription("channel description");
+            notificationChannel.enableLights(true);
+            notificationChannel.setLightColor(Color.GREEN);
+            notificationChannel.enableVibration(true);
+            notificationChannel.setVibrationPattern(new long[]{100, 200, 100, 200});
+            notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            nm.createNotificationChannel(notificationChannel);
+        }
+
+
+        checkBluetooth();
 
     }
 
@@ -302,13 +341,13 @@ public class MainActivity extends AppCompatActivity {
                     try {
 //                        Log.e("Test", "test");
                         // InputStream.available() : 다른 스레드에서 blocking 하기 전까지 읽은 수 있는 문자열 개수를 반환함.
-                        int byteAvailable = mInputStream.available();   // 수신 데이터 확인
-                        if (byteAvailable > 0) {                        // 데이터가 수신된 경우.
-                            Log.e("Test", byteAvailable + ".");
-                            byte[] packetBytes = new byte[byteAvailable];
+                        final int[] byteAvailable = {mInputStream.available()};   // 수신 데이터 확인
+                        if (byteAvailable[0] > 0) {                        // 데이터가 수신된 경우.
+//                            Log.e("Test", byteAvailable + ".");
+                            byte[] packetBytes = new byte[byteAvailable[0]];
                             // read(buf[]) : 입력스트림에서 buf[] 크기만큼 읽어서 저장 없을 경우에 -1 리턴.
                             mInputStream.read(packetBytes);
-                            for (int i = 0; i < byteAvailable; i++) {
+                            for (int i = 0; i < byteAvailable[0]; i++) {
                                 byte b = packetBytes[i];
                                 if (b == mCharDelimiter) {
                                     byte[] encodedBytes = new byte[readBufferPosition];
@@ -316,13 +355,16 @@ public class MainActivity extends AppCompatActivity {
                                     //  readBuffer 배열을 처음 부터 끝까지 encodedBytes 배열로 복사.
                                     System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
 
-                                    final String data = new String(encodedBytes, "US-ASCII");
+                                    final String data = new String(encodedBytes, "UTF-8");
                                     readBufferPosition = 0;
-
+//                                    Log.e("Test", data);
+                                    final int[] cnt = {0};
                                     handler.post(new Runnable() {
                                         // 수신된 문자열 데이터에 대한 처리.
+                                        @RequiresApi(api = Build.VERSION_CODES.O)
                                         @Override
                                         public void run() {
+                                            cnt[0]++;
                                             // mStrDelimiter = '\n';
 
 //                                            LeftFragment leftFragment = new LeftFragment();
@@ -331,14 +373,57 @@ public class MainActivity extends AppCompatActivity {
 //                                            Log.e("Test", data);
 //                                            leftFragment.setArguments(bundle);
 //                                            leftFragment.setText();
+                                            if(data != null) {
+                                                StringTokenizer stringTokenizer = new StringTokenizer(data, "|");
+                                                String c = stringTokenizer.nextToken().toString();
+                                                Log.e("Text", c);
+                                                int code = 0;
+                                                if(c != "") {
+                                                    code = Integer.parseInt(c);
+                                                }
 
-                                            carbon_concentration.setText(data);
+//                                                Log.e("Test",code+",");
+                                                    if (code == 100) {
+
+                                                        int token = Integer.parseInt(stringTokenizer.nextToken().toString().trim());
+                                                        Log.e("Token",token+",");
+//                                                        Log.e("TokenTest","1");
+                                                        if (token == 0) {
+                                                            Log.e("Test", token+",");
+                                                            cnt[0] = 0;
+//                                                        Log.e("Test", token);
+                                                            if (!mediaPlayer.isPlaying())
+                                                                mediaPlayer.start();
+
+//                                                            Intent intent = new Intent(MainActivity.this,ServiceAreaActivity.class);
+//                                                            intent.putExtra("flag",100);
+//                                                            startActivity(intent);
+                                                        }
+
+                                                    }
+                                                    if (code == 200) {
+                                                        String carbon = stringTokenizer.nextToken().toString();
+                                                        carbon_concentration.setText(carbon);
+//                                                    Log.e("Carbon",carbon+".");
+
+
+                                                    if( Integer.parseInt(carbon.trim()) >= 700){
+                                                        NotificationSomethings();
+                                                        layout.setBackgroundColor(Color.RED);
+                                                    }
+                                                    else{
+                                                        layout.setBackgroundColor(Color.WHITE);
+                                                    }
+
+
+                                                }
+                                            }
                                         }
 
                                     });
                                 } else {
                                     readBuffer[readBufferPosition++] = b;
-                                    Log.e("Test", "fail");
+//                                    Log.e("Test", "fail");
                                 }
                             }
                         }
@@ -361,6 +446,8 @@ public class MainActivity extends AppCompatActivity {
             mWorkerThread.interrupt(); // 데이터 수신 쓰레드 종료
             mInputStream.close();
             mSocket.close();
+            mediaPlayer.release();
+            mediaPlayer = null;
         } catch (Exception e) {
         }
         super.onDestroy();
@@ -383,6 +470,34 @@ public class MainActivity extends AppCompatActivity {
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void NotificationSomethings() {
+
+
+        Resources res = getResources();
+
+        Intent notificationIntent = new Intent(getApplicationContext(), MainActivity.class);
+//        notificationIntent.putExtra("notificationId", 9999); //전달할 값
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Notification.Builder builder = new Notification.Builder(MainActivity.this);
+
+        builder.setContentTitle("이산화탄소 농도가 높아요!")
+                .setContentText("창문을 열어주세요!")
+                .setTicker("이산화탄소 농도가 높아요!")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setChannelId("1234")
+                .setLargeIcon(BitmapFactory.decodeResource(res, R.mipmap.ic_launcher))
+                .setContentIntent(contentIntent)
+                .setAutoCancel(true)
+                .setWhen(System.currentTimeMillis())
+                .setDefaults(Notification.DEFAULT_ALL);
+
+        Log.e("IsNoti","noti");
+        nm.notify(1234, builder.build());
+    }
+
 
 }
 
